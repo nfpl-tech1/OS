@@ -1,0 +1,19 @@
+{
+  "name": "nagarkot-os",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "backend": "npm --workspace=apps/os-backend run start:dev",
+    "frontend": "npm --workspace=apps/os-frontend run dev"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "shadcn": "^4.0.2"
+  }
+}
