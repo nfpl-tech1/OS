@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -33,6 +33,7 @@ interface AppOption {
 }
 
 type AppSelections = Record<string, { enabled: boolean; isAppAdmin: boolean }>;
+type UserTypeValue = 'employee' | 'client';
 
 export default function NewUserPage() {
   const router = useRouter();
@@ -77,7 +78,7 @@ export default function NewUserPage() {
     });
   }, [form.user_type]);
 
-  function set(field: string, value: any) {
+  function set<K extends keyof typeof form>(field: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -120,6 +121,12 @@ export default function NewUserPage() {
     setLoading(true);
 
     try {
+      if (form.user_type !== 'client' && !form.department_id) {
+        setError('Please assign a department for internal users.');
+        setLoading(false);
+        return;
+      }
+
       // Validate email uniqueness
       const users = await api.get('/users').then(res => res.data);
       const isDuplicate = users.some((u: { email: string }) => u.email.toLowerCase() === form.email.toLowerCase());
@@ -159,10 +166,8 @@ export default function NewUserPage() {
   async function handleFinish() {
     setError('');
 
-    // Validation: if app admin or team lead is true, department must be assigned
-    const hasAppAdmin = Object.values(appSelections).some((s) => s.enabled && s.isAppAdmin);
-    if ((hasAppAdmin || form.is_team_lead) && !form.department_id) {
-      setError('A Department must be assigned if the user is a Team Lead or App Admin.');
+    if (form.user_type !== 'client' && !form.department_id) {
+      setError('Please assign a department for internal users.');
       return;
     }
 
@@ -171,7 +176,7 @@ export default function NewUserPage() {
       const created = await createUser({
         ...form,
         company_email: form.company_email.trim() || undefined,
-        department_id: form.department_id === '_none_' ? undefined : (form.department_id || undefined),
+        department_id: form.department_id || undefined,
         org_id: form.org_id || undefined,
       });
       for (const [slug, selection] of Object.entries(appSelections)) {
@@ -297,7 +302,7 @@ export default function NewUserPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label className="text-xs font-bold text-slate-600 ml-1">Designation Type</Label>
-                        <Select value={form.user_type} onValueChange={(val: any) => set('user_type', val)}>
+                        <Select value={form.user_type} onValueChange={(val) => set('user_type', val as UserTypeValue)}>
                           <SelectTrigger className="h-12 w-full rounded-xl border-slate-200 focus:ring-primary/5 focus:border-primary font-bold text-slate-900 text-sm">
                             <SelectValue />
                           </SelectTrigger>
@@ -339,17 +344,17 @@ export default function NewUserPage() {
                       <div className="space-y-6">
                         <div className="space-y-2">
                           <Label className="text-xs font-bold text-slate-600 ml-1">Assigned Organizational Unit</Label>
-                          <Select value={form.department_id || '_none_'} onValueChange={(val) => set('department_id', val)}>
+                          <Select value={form.department_id} onValueChange={(val) => set('department_id', val)}>
                             <SelectTrigger className="h-12 w-full max-w-md rounded-xl border-slate-200 focus:ring-primary/5 focus:border-primary font-bold text-slate-900 text-sm">
                               <SelectValue placeholder="Select Unit..." />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
-                              <SelectItem value="_none_">No Specific Unit</SelectItem>
                               {departments.map((d) => (
                                 <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          <p className="text-[10px] text-slate-400 font-medium ml-1">Department assignment is required for internal users.</p>
                         </div>
 
                         <div className={cn(
@@ -428,7 +433,7 @@ export default function NewUserPage() {
                         <p className="text-xs font-medium text-slate-600 truncate">
                           {form.user_type === 'client' 
                             ? 'Client Organization' 
-                            : (departments.find(d => d.id === form.department_id)?.name || 'General Operations')}
+                            : (departments.find(d => d.id === form.department_id)?.name || 'Department required')}
                         </p>
                       </div>
                     </div>
@@ -436,7 +441,7 @@ export default function NewUserPage() {
                     <div className="pt-6">
                       <div className="p-4 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/40 shadow-sm">
                         <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic">
-                          "Personnel will receive a system invitation via email once the provisioning process is complete."
+                          &quot;Personnel will receive a system invitation via email once the provisioning process is complete.&quot;
                         </p>
                       </div>
                     </div>

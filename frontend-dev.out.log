@@ -1,0 +1,17 @@
+
+> os-frontend@0.1.0 dev
+> next dev -H 0.0.0.0 --port 3002
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3002
+- Network:       http://0.0.0.0:3002
+- Environments: .env.local
+✓ Ready in 1799ms
+Creating turbopack project {
+  dir: 'D:\\Nagarkot\\OS and All\\OS\\apps\\os-frontend',
+  testMode: true
+}
+
+ GET /login 200 in 187ms (next.js: 55ms, proxy.ts: 3ms, application-code: 128ms)
+ GET /sso?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl9pZCI6ImQ4NDNjYTEyLWY3ZTctNGZjNC1iMTM5LThiM2Q4MWM3NWRkOSIsInVzZXJfaWQiOiIyOWUxNjU1Ni1iYTNhLTQ4MTUtODE2Yi04ZTZiMTZlZmZhYjAiLCJlbWFpbCI6ImFkbWluQG5hZ2Fya290LmNvbSIsImNvbXBhbnlfZW1haWwiOm51bGwsIm5hbWUiOiJBZG1pbiIsInVzZXJfdHlwZSI6ImVtcGxveWVlIiwiZGVwYXJ0bWVudF9zbHVnIjpudWxsLCJkZXBhcnRtZW50X25hbWUiOm51bGwsImlzX2FwcF9hZG1pbiI6dHJ1ZSwiaXNfdGVhbV9sZWFkIjpmYWxzZSwib3JnX2lkIjpudWxsLCJvcmdfbmFtZSI6bnVsbCwiaWF0IjoxNzc3Mjc3NDIxLCJleHAiOjE3NzcyNzc0ODF9.q_aWsBaNIrjpnDL1cwycXJRKryjDYih8i7aqe_vAnm-xSqHu9uggfgVPLDsGt8IjC_sUTSeMz1P9Om_R-HlUYJt_4IkicmnFGYqXVgX58HsX8GsFN_GMJWG3a1Pn8MOl6Ncn2-Y_N7-0snAoCQ5u6eQEXqnUFxRtr1T_xi5CxKE7b4tp5c0OYgW2tt8n8gmqGIxZWLFwZQHZrRwBV93OYxnMKV1mK5BEQKbbEJTOohAof1CqOp9VsLzLHgPJ2WH7Ad2nSSJmbIU6DqXwiAA0we8JR72AkdtNW6VNk1kr5Da23-_d3tAnVJ4GQHeyMq1uQn7DoUR-mlPjOynBbdzaNg 404 in 268ms (next.js: 234ms, application-code: 34ms)
+[?25h

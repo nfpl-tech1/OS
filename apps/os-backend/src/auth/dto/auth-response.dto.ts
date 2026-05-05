@@ -2,7 +2,7 @@ export interface AppAccess {
   slug: string;
   name: string;
   url: string;
-  icon_url: string;
+  icon_url: string | null;
 }
 
 export class AuthResponseDto {

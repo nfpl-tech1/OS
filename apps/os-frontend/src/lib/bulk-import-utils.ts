@@ -65,6 +65,9 @@ export function validateRow(row: BulkRow, allRows: BulkRow[]): Record<string, st
   if (row.company_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.company_email.trim())) {
     errors.company_email = 'Invalid email';
   }
+  if (row.user_type !== 'client' && !row.department_id) {
+    errors.department_id = 'Department required';
+  }
   return errors;
 }
 
@@ -86,7 +89,7 @@ export function downloadTemplate() {
   const csv = [
     'name,email,company_email,password,user_type,department_name,is_team_lead',
     'John Doe,john.doe@example.com,internal.john@company.com,SecurePass123,employee,Technology,no',
-    'Jane Smith,jane.smith@example.com,,SecurePass123,employee,,no',
+    'Jane Smith,jane.smith@example.com,,SecurePass123,employee,Accounts,no',
   ].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);

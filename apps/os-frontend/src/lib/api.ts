@@ -94,7 +94,15 @@ export async function createUser(data: {
 
 export async function updateUser(
   id: string,
-  data: { name?: string; email?: string; company_email?: string | null; password?: string; status?: 'active' | 'disabled' | 'deleted'; is_team_lead?: boolean },
+  data: {
+    name?: string;
+    email?: string;
+    company_email?: string | null;
+    password?: string;
+    status?: 'active' | 'disabled' | 'deleted';
+    is_team_lead?: boolean;
+    department_id?: string | null;
+  },
 ) {
   const res = await api.patch(`/users/${id}`, data);
   return res.data;

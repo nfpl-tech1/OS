@@ -17,13 +17,11 @@ import {
 } from '@/lib/bulk-import-utils';
 import { Icons } from '@/components/shared/Icons';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -42,7 +40,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from '@/lib/utils';
 
 interface BulkImportModalProps {
@@ -52,6 +49,15 @@ interface BulkImportModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+type ModalApiError = {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
 
 // ─── Sticky column definitions ────────────────────────────────────────────────
 
@@ -157,8 +163,9 @@ export default function BulkImportModal({
         const parsed = await parseFile(file, departments);
         setRows(parsed);
         setStep('preview');
-      } catch (err: any) {
-        setParseError(err.message || 'Failed to parse file');
+      } catch (err: unknown) {
+        const apiError = err as ModalApiError;
+        setParseError(apiError.message || 'Failed to parse file');
       } finally {
         setParsing(false);
       }
@@ -251,8 +258,9 @@ export default function BulkImportModal({
       setImportResult(result);
       setStep('done');
       if (result.results.length > 0) onSuccess();
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Import failed. Please try again.');
+    } catch (err: unknown) {
+      const apiError = err as ModalApiError;
+      alert(apiError?.response?.data?.message || 'Import failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -341,7 +349,7 @@ export default function BulkImportModal({
                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 leading-none">Payload requirements</p>
                   <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                    Required: name, email, password, user_type. Department mapping is automated via slug matching.
+                    Required: name, email, password, user_type. Department is required for internal users and is matched by name or slug.
                   </p>
                 </div>
               </div>
@@ -441,7 +449,7 @@ export default function BulkImportModal({
                             <TableCell className="p-1 px-2">
                               <Select 
                                 value={row.user_type} 
-                                onValueChange={(val: any) => updateRow(row._id, { user_type: val })}
+                                onValueChange={(val) => updateRow(row._id, { user_type: val as BulkRow['user_type'] })}
                               >
                                 <SelectTrigger className="h-10 border-none bg-slate-50/50 rounded-lg text-xs font-bold uppercase tracking-wider text-slate-500 focus:ring-0">
                                   <SelectValue />
@@ -457,11 +465,13 @@ export default function BulkImportModal({
                                 value={row.department_id} 
                                 onValueChange={(val) => updateRow(row._id, { department_id: val })}
                               >
-                                <SelectTrigger className="h-10 border-none bg-slate-50/50 rounded-lg text-xs font-bold uppercase tracking-wider text-primary focus:ring-0">
+                                <SelectTrigger className={cn(
+                                  "h-10 border-none bg-slate-50/50 rounded-lg text-xs font-bold uppercase tracking-wider text-primary focus:ring-0",
+                                  errs.department_id && "text-red-500"
+                                )}>
                                   <SelectValue placeholder="—" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="_none_">No Unit</SelectItem>
                                   {departments.map(d => (
                                     <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                                   ))}

@@ -1,0 +1,9 @@
+⚠ Found lockfile missing swc dependencies, patching...
+⚠ Lockfile was successfully patched, please run "npm install" to ensure @next/swc dependencies are downloaded
+npm error Lifecycle script `dev` failed with error:
+npm error code 1
+npm error path D:\Nagarkot\OS and All\OS\apps\os-frontend
+npm error workspace os-frontend@0.1.0
+npm error location D:\Nagarkot\OS and All\OS\apps\os-frontend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next dev -H 0.0.0.0

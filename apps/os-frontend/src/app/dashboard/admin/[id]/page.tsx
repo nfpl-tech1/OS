@@ -2,9 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getUser, getUserAppAccess, setAppAccess, setAppAdmin, getApplications, updateUser } from '@/lib/api';
+import {
+  getUser,
+  getUserAppAccess,
+  setAppAccess,
+  setAppAdmin,
+  getApplications,
+  getDepartments,
+  updateUser,
+} from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+
+type ApiError = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
 
 interface AccessRecord {
   app_slug: string;
@@ -18,26 +34,40 @@ export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
   const isSelf = currentUser?.id === id;
-  const [user, setUser] = useState<{ name: string; email: string; company_email?: string; status: 'active' | 'disabled' | 'deleted'; userType: { label: string; slug: string }; is_team_lead: boolean } | null>(null);
+  const [user, setUser] = useState<{
+    name: string;
+    email: string;
+    company_email?: string;
+    status: 'active' | 'disabled' | 'deleted';
+    userType: { label: string; slug: string };
+    department: { id: string; name: string } | null;
+    is_team_lead: boolean;
+  } | null>(null);
   const [access, setAccess] = useState<AccessRecord[]>([]);
   const [allApps, setAllApps] = useState<{ slug: string; name: string }[]>([]);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [editEmail, setEditEmail] = useState('');
   const [editCompanyEmail, setEditCompanyEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
+  const [editDepartmentId, setEditDepartmentId] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
   useEffect(() => {
-    Promise.all([getUser(id), getUserAppAccess(id), getApplications()])
-      .then(([u, a, apps]) => {
+    Promise.all([getUser(id), getUserAppAccess(id), getApplications(), getDepartments()])
+      .then(([u, a, apps, departmentOptions]) => {
         setUser(u);
         setEditEmail(u.email);
         setEditCompanyEmail(u.company_email || '');
+        setEditDepartmentId(u.department?.id || '');
         setAccess(a);
         setAllApps(apps);
+        setDepartments(departmentOptions);
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -103,22 +133,53 @@ export default function UserDetailPage() {
   async function saveCredentials() {
     if (!editEmail.trim()) { setEditError('Email cannot be empty.'); return; }
     if (editPassword && editPassword.length < 8) { setEditError('Password must be at least 8 characters.'); return; }
+    if (user?.userType?.slug !== 'client' && !editDepartmentId) {
+      setEditError('Internal users must have a department assigned.');
+      return;
+    }
     setEditSaving(true);
     setEditError('');
     try {
-      const payload: { email?: string; company_email?: string | null; password?: string } = {};
+      const payload: {
+        email?: string;
+        company_email?: string | null;
+        password?: string;
+        department_id?: string | null;
+      } = {};
       if (editEmail !== user?.email) payload.email = editEmail.trim();
       if (editCompanyEmail !== (user?.company_email || '')) {
          payload.company_email = editCompanyEmail.trim() || null;
       }
+      if (editDepartmentId !== (user?.department?.id || '')) {
+        payload.department_id = editDepartmentId || null;
+      }
       if (editPassword) payload.password = editPassword;
-      if (!payload.email && payload.company_email === undefined && !payload.password) { setEditOpen(false); setEditSaving(false); return; }
+      if (
+        !payload.email &&
+        payload.company_email === undefined &&
+        payload.department_id === undefined &&
+        !payload.password
+      ) {
+        setEditOpen(false);
+        setEditSaving(false);
+        return;
+      }
       const updated = await updateUser(id, payload);
-      setUser((u) => u ? { ...u, email: updated.email, company_email: updated.company_email || '' } : u);
+      setUser((u) =>
+        u
+          ? {
+              ...u,
+              email: updated.email,
+              company_email: updated.company_email || '',
+              department: updated.department ?? null,
+            }
+          : u,
+      );
       setEditPassword('');
       setEditOpen(false);
-    } catch (err: any) {
-      setEditError(err?.response?.data?.message ?? 'Failed to save changes.');
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      setEditError(apiError?.response?.data?.message ?? 'Failed to save changes.');
     } finally {
       setEditSaving(false);
     }
@@ -167,7 +228,14 @@ export default function UserDetailPage() {
             </div>
             {!isSelf && (
               <button
-                onClick={() => { setEditOpen(o => !o); setEditError(''); setEditPassword(''); setEditEmail(user?.email ?? ''); setEditCompanyEmail(user?.company_email || ''); }}
+                onClick={() => {
+                  setEditOpen(o => !o);
+                  setEditError('');
+                  setEditPassword('');
+                  setEditEmail(user?.email ?? '');
+                  setEditCompanyEmail(user?.company_email || '');
+                  setEditDepartmentId(user?.department?.id || '');
+                }}
                 className="text-xs px-2.5 py-1 rounded-lg shrink-0"
                 style={{ border: '1px solid #E2E8F0', color: '#1B3A6C', backgroundColor: '#fff', cursor: 'pointer' }}
               >
@@ -201,6 +269,24 @@ export default function UserDetailPage() {
                     style={{ border: '1px solid #E2E8F0', color: '#1a202c', backgroundColor: '#fff' }}
                   />
                 </div>
+                {user?.userType?.slug !== 'client' && (
+                  <div>
+                    <label className="text-xs font-medium block mb-1" style={{ color: '#64748B' }}>Department</label>
+                    <select
+                      value={editDepartmentId}
+                      onChange={e => setEditDepartmentId(e.target.value)}
+                      className="w-full text-sm px-3 py-2 rounded-lg focus:outline-none"
+                      style={{ border: '1px solid #E2E8F0', color: '#1a202c', backgroundColor: '#fff' }}
+                    >
+                      <option value="" disabled>Select department</option>
+                      {departments.map((department) => (
+                        <option key={department.id} value={department.id}>
+                          {department.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: '#64748B' }}>New Password <span style={{ color: '#94A3B8', fontWeight: 400 }}>(leave blank to keep current)</span></label>
                   <input
@@ -236,6 +322,11 @@ export default function UserDetailPage() {
             }`}>
               {user?.status === 'active' ? 'Active' : 'Inactive'}
             </span>
+            {user?.department && (
+              <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-medium">
+                {user.department.name}
+              </span>
+            )}
           </div>
           {user?.userType?.slug !== 'admin' && (
             <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid #F1F5F9' }}>

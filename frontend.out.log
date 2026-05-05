@@ -1,0 +1,20 @@
+
+> nagarkot-os@1.0.0 frontend
+> npm --workspace=apps/os-frontend run dev
+
+
+> os-frontend@0.1.0 dev
+> next dev -H 0.0.0.0
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+- Environments: .env.local
+✓ Ready in 731ms
+Creating turbopack project {
+  dir: 'D:\\Nagarkot\\OS and All\\OS\\apps\\os-frontend',
+  testMode: true
+}
+
+ GET /login 200 in 2.3s (next.js: 2.1s, proxy.ts: 6ms, application-code: 215ms)
+[?25h

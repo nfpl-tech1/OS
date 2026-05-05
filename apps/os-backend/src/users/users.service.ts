@@ -148,6 +148,9 @@ export class UsersService {
     if (dto.user_type === 'client' && !dto.org_id) {
       throw new BadRequestException('org_id is required for client users');
     }
+    if (dto.user_type !== 'client' && !dto.department_id) {
+      throw new BadRequestException('department_id is required for internal users');
+    }
 
     const password_hash = await bcrypt.hash(dto.password, 10);
 
@@ -162,11 +165,7 @@ export class UsersService {
     });
 
     if (dto.department_id) {
-      const department = await this.deptRepo.findOne({
-        where: { id: dto.department_id },
-      });
-      if (!department) throw new NotFoundException('Department not found');
-      user.department = department;
+      user.department = await this.findDepartmentOrThrow(dto.department_id);
     }
 
     // Link client user to organization via direct FK
@@ -226,7 +225,10 @@ export class UsersService {
     if (dto.status === 'disabled' && id === requesterId) {
       throw new BadRequestException('You cannot deactivate your own account');
     }
-    const user = await this.usersRepo.findOne({ where: { id } });
+    const user = await this.usersRepo.findOne({
+      where: { id },
+      relations: ['userType', 'department', 'organization'],
+    });
     if (!user) throw new NotFoundException('User not found');
 
     const before = { name: user.name, email: user.email, status: user.status, is_team_lead: user.is_team_lead };
@@ -248,13 +250,14 @@ export class UsersService {
 
     if (dto.department_id !== undefined) {
       if (dto.department_id === null) {
+        if (user.userType?.slug !== 'client') {
+          throw new BadRequestException(
+            'Internal users must have a department assigned',
+          );
+        }
         user.department = null;
       } else {
-        const department = await this.deptRepo.findOne({
-          where: { id: dto.department_id },
-        });
-        if (!department) throw new NotFoundException('Department not found');
-        user.department = department;
+        user.department = await this.findDepartmentOrThrow(dto.department_id);
       }
     }
 
@@ -705,6 +708,13 @@ export class UsersService {
           errors.push({ email: entry.email, error: 'Invalid user type' });
           continue;
         }
+        if (entry.user_type !== 'client' && !entry.department_id) {
+          errors.push({
+            email: entry.email,
+            error: 'department_id is required for internal users',
+          });
+          continue;
+        }
 
         const password_hash = await bcrypt.hash(entry.password, 10);
         const user = this.usersRepo.create({
@@ -718,9 +728,7 @@ export class UsersService {
         });
 
         if (entry.department_id) {
-          user.department = await this.deptRepo.findOne({
-            where: { id: entry.department_id },
-          });
+          user.department = await this.findDepartmentOrThrow(entry.department_id);
         }
 
         if (entry.user_type === 'client' && entry.org_id) {
@@ -806,5 +814,15 @@ export class UsersService {
     }).catch(() => {});
 
     return { message: 'Sync broadcast initiated', departments: departments.length };
+  }
+
+  private async findDepartmentOrThrow(departmentId: string) {
+    const department = await this.deptRepo.findOne({
+      where: { id: departmentId },
+    });
+    if (!department) {
+      throw new NotFoundException('Department not found');
+    }
+    return department;
   }
 }
