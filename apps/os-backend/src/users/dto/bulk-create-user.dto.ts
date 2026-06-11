@@ -42,6 +42,10 @@ export class BulkUserEntry {
   is_team_lead?: boolean;
 
   @IsOptional()
+  @IsUUID()
+  branch_id?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   app_slugs?: string[];

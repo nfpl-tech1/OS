@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUsers, updateUser, deleteUser, getApplications, getDepartments } from '@/lib/api';
+import { getUsers, updateUser, deleteUser, getApplications, getDepartments, getBranches } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import AdminLayout from '@/components/AdminLayout';
@@ -29,7 +29,9 @@ interface User {
   status: 'active' | 'disabled' | 'deleted';
   created_at: string;
   userType: { slug: string; label: string };
-  department: { id: string; name: string } | null;
+  department?: { id: string; name: string };
+  branch?: { id: string; name: string };
+  organization?: { id: string; name: string };
 }
 
 interface App {
@@ -46,6 +48,13 @@ interface Department {
   default_apps?: { id: string; slug: string; name: string }[];
 }
 
+interface Branch {
+  id: string;
+  slug: string;
+  name: string;
+  default_apps?: { id: string; slug: string; name: string }[];
+}
+
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
   const router = useRouter();
@@ -55,6 +64,7 @@ export default function AdminUsersPage() {
   const [showImport, setShowImport] = useState(false);
   const [apps, setApps] = useState<App[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   useEffect(() => {
     if (currentUser === undefined) return; // Wait for auth to initialize
@@ -66,14 +76,16 @@ export default function AdminUsersPage() {
     
     const loadData = async () => {
       try {
-        const [u, a, d] = await Promise.all([
+        const [u, a, d, b] = await Promise.all([
           getUsers(),
           getApplications(),
           getDepartments(),
+          getBranches(),
         ]);
         setUsers(u);
         setApps(a);
         setDepartments(d);
+        setBranches(b);
       } catch (error) {
         console.error("Failed to load admin data:", error);
       } finally {
@@ -210,6 +222,7 @@ export default function AdminUsersPage() {
                   <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Basic Info</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Security Profile</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Organization</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Branch</TableHead>
                   <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-slate-400 pr-8">Administrative Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -246,6 +259,16 @@ export default function AdminUsersPage() {
                        {u.department ? (
                          <Badge variant="outline" className="bg-slate-50 border-slate-100 text-slate-600 font-bold text-[10px]">
                            {u.department.name}
+                         </Badge>
+                       ) : (
+                         <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Unassigned</span>
+                       )}
+                    </TableCell>
+
+                    <TableCell>
+                       {u.branch ? (
+                         <Badge variant="outline" className="bg-slate-50 border-slate-100 text-slate-600 font-bold text-[10px]">
+                           {u.branch.name}
                          </Badge>
                        ) : (
                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Unassigned</span>
@@ -307,6 +330,7 @@ export default function AdminUsersPage() {
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-[9px] font-bold uppercase px-2 py-1">{u.userType.label}</Badge>
                     {u.department ? <Badge variant="outline" className="text-[9px] font-bold uppercase px-2 py-1">{u.department.name}</Badge> : <span className="text-xs text-slate-300">Unassigned</span>}
+                    {u.branch ? <Badge variant="outline" className="text-[9px] font-bold uppercase px-2 py-1">{u.branch.name}</Badge> : null}
                     <Link href={`/dashboard/admin/${u.id}`}>
                       <Button size="sm" className="ml-2 h-8 px-3">Manage</Button>
                     </Link>
@@ -331,6 +355,7 @@ export default function AdminUsersPage() {
         isOpen={showImport} 
         apps={apps}
         departments={departments}
+        branches={branches}
         onClose={() => setShowImport(false)} 
         onSuccess={() => {
           setShowImport(false);

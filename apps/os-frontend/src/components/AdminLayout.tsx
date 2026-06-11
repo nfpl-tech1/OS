@@ -92,10 +92,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 active={pathname.startsWith('/dashboard/admin/departments')} 
               />
               <NavItem 
+                icon={<Icons.Departments size={18} />} 
+                label="Branches" 
+                href="/dashboard/admin/branches" 
+                active={pathname.startsWith('/dashboard/admin/branches')} 
+              />
+              <NavItem 
                 icon={<Icons.Users size={18} />} 
                 label="User Management" 
                 href="/dashboard/admin" 
-                active={pathname === '/dashboard/admin' || (pathname.startsWith('/dashboard/admin/') && !pathname.startsWith('/dashboard/admin/apps') && !pathname.startsWith('/dashboard/admin/departments') && !pathname.startsWith('/dashboard/admin/audit-logs'))} 
+                active={pathname === '/dashboard/admin' || (pathname.startsWith('/dashboard/admin/') && !pathname.startsWith('/dashboard/admin/apps') && !pathname.startsWith('/dashboard/admin/departments') && !pathname.startsWith('/dashboard/admin/branches') && !pathname.startsWith('/dashboard/admin/audit-logs'))} 
               />
               <NavItem 
                 icon={<Icons.Logs size={18} />} 
@@ -141,7 +147,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Administration</p>
                   <NavItem icon={<Icons.Apps size={18} />} label="Applications" href="/dashboard/admin/apps" active={pathname.startsWith('/dashboard/admin/apps')} />
                   <NavItem icon={<Icons.Departments size={18} />} label="Departments" href="/dashboard/admin/departments" active={pathname.startsWith('/dashboard/admin/departments')} />
-                  <NavItem icon={<Icons.Users size={18} />} label="User Management" href="/dashboard/admin" active={pathname === '/dashboard/admin' || (pathname.startsWith('/dashboard/admin/') && !pathname.startsWith('/dashboard/admin/apps') && !pathname.startsWith('/dashboard/admin/departments') && !pathname.startsWith('/dashboard/admin/audit-logs'))} />
+                  <NavItem icon={<Icons.Departments size={18} />} label="Branches" href="/dashboard/admin/branches" active={pathname.startsWith('/dashboard/admin/branches')} />
+                  <NavItem icon={<Icons.Users size={18} />} label="User Management" href="/dashboard/admin" active={pathname === '/dashboard/admin' || (pathname.startsWith('/dashboard/admin/') && !pathname.startsWith('/dashboard/admin/apps') && !pathname.startsWith('/dashboard/admin/departments') && !pathname.startsWith('/dashboard/admin/branches') && !pathname.startsWith('/dashboard/admin/audit-logs'))} />
                   <NavItem icon={<Icons.Logs size={18} />} label="System Logs" href="/dashboard/admin/audit-logs" active={pathname.startsWith('/dashboard/admin/audit-logs')} />
                 </div>
               )}

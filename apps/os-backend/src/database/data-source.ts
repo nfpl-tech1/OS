@@ -11,6 +11,8 @@ import { ClientOrganization } from './entities/client-organization.entity';
 import { SsoToken } from './entities/sso-token.entity';
 import { DepartmentDefaultApp } from './entities/department-default-app.entity';
 import { AuditLog } from './entities/audit-log.entity';
+import { Branch } from './entities/branch.entity';
+import { BranchDefaultApp } from './entities/branch-default-app.entity';
 
 dotenv.config();
 
@@ -31,6 +33,8 @@ export const AppDataSource = new DataSource({
     SsoToken,
     DepartmentDefaultApp,
     AuditLog,
+    Branch,
+    BranchDefaultApp,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,

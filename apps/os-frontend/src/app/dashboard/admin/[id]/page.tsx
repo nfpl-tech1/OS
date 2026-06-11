@@ -9,6 +9,7 @@ import {
   setAppAdmin,
   getApplications,
   getDepartments,
+  getBranches,
   updateUser,
 } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -41,6 +42,7 @@ export default function UserDetailPage() {
     status: 'active' | 'disabled' | 'deleted';
     userType: { label: string; slug: string };
     department: { id: string; name: string } | null;
+    branch: { id: string; name: string } | null;
     is_team_lead: boolean;
   } | null>(null);
   const [access, setAccess] = useState<AccessRecord[]>([]);
@@ -48,6 +50,7 @@ export default function UserDetailPage() {
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>(
     [],
   );
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -55,19 +58,22 @@ export default function UserDetailPage() {
   const [editCompanyEmail, setEditCompanyEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editDepartmentId, setEditDepartmentId] = useState('');
+  const [editBranchId, setEditBranchId] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
   useEffect(() => {
-    Promise.all([getUser(id), getUserAppAccess(id), getApplications(), getDepartments()])
-      .then(([u, a, apps, departmentOptions]) => {
+    Promise.all([getUser(id), getUserAppAccess(id), getApplications(), getDepartments(), getBranches()])
+      .then(([u, a, apps, departmentOptions, branchOptions]) => {
         setUser(u);
         setEditEmail(u.email);
         setEditCompanyEmail(u.company_email || '');
         setEditDepartmentId(u.department?.id || '');
+        setEditBranchId(u.branch?.id || '');
         setAccess(a);
         setAllApps(apps);
         setDepartments(departmentOptions);
+        setBranches(branchOptions);
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -137,6 +143,10 @@ export default function UserDetailPage() {
       setEditError('Internal users must have a department assigned.');
       return;
     }
+    if (user?.userType?.slug !== 'client' && !editBranchId) {
+      setEditError('Internal users must have a branch assigned.');
+      return;
+    }
     setEditSaving(true);
     setEditError('');
     try {
@@ -145,6 +155,7 @@ export default function UserDetailPage() {
         company_email?: string | null;
         password?: string;
         department_id?: string | null;
+        branch_id?: string | null;
       } = {};
       if (editEmail !== user?.email) payload.email = editEmail.trim();
       if (editCompanyEmail !== (user?.company_email || '')) {
@@ -153,11 +164,15 @@ export default function UserDetailPage() {
       if (editDepartmentId !== (user?.department?.id || '')) {
         payload.department_id = editDepartmentId || null;
       }
+      if (editBranchId !== (user?.branch?.id || '')) {
+        payload.branch_id = editBranchId || null;
+      }
       if (editPassword) payload.password = editPassword;
       if (
         !payload.email &&
         payload.company_email === undefined &&
         payload.department_id === undefined &&
+        payload.branch_id === undefined &&
         !payload.password
       ) {
         setEditOpen(false);
@@ -172,6 +187,7 @@ export default function UserDetailPage() {
               email: updated.email,
               company_email: updated.company_email || '',
               department: updated.department ?? null,
+              branch: updated.branch ?? null,
             }
           : u,
       );
@@ -235,6 +251,7 @@ export default function UserDetailPage() {
                   setEditEmail(user?.email ?? '');
                   setEditCompanyEmail(user?.company_email || '');
                   setEditDepartmentId(user?.department?.id || '');
+                  setEditBranchId(user?.branch?.id || '');
                 }}
                 className="text-xs px-2.5 py-1 rounded-lg shrink-0"
                 style={{ border: '1px solid #E2E8F0', color: '#1B3A6C', backgroundColor: '#fff', cursor: 'pointer' }}
@@ -287,6 +304,24 @@ export default function UserDetailPage() {
                     </select>
                   </div>
                 )}
+                {user?.userType?.slug !== 'client' && (
+                  <div>
+                    <label className="text-xs font-medium block mb-1" style={{ color: '#64748B' }}>Branch</label>
+                    <select
+                      value={editBranchId}
+                      onChange={e => setEditBranchId(e.target.value)}
+                      className="w-full text-sm px-3 py-2 rounded-lg focus:outline-none"
+                      style={{ border: '1px solid #E2E8F0', color: '#1a202c', backgroundColor: '#fff' }}
+                    >
+                      <option value="" disabled>Select branch</option>
+                      {branches.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: '#64748B' }}>New Password <span style={{ color: '#94A3B8', fontWeight: 400 }}>(leave blank to keep current)</span></label>
                   <input
@@ -325,6 +360,11 @@ export default function UserDetailPage() {
             {user?.department && (
               <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-medium">
                 {user.department.name}
+              </span>
+            )}
+            {user?.branch && (
+              <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-medium">
+                {user.branch.name}
               </span>
             )}
           </div>

@@ -13,6 +13,7 @@ import { UserType } from './user-type.entity';
 import { UserAppAccess } from './user-app-access.entity';
 import { ClientOrganization } from './client-organization.entity';
 import { Department } from './department.entity';
+import { Branch } from './branch.entity';
 
 export type UserStatus = 'active' | 'disabled' | 'deleted';
 
@@ -42,6 +43,10 @@ export class User {
   @ManyToOne(() => Department, (dept) => dept.users, { nullable: true, eager: true })
   @JoinColumn({ name: 'department_id' })
   department: Department | null;
+
+  @ManyToOne(() => Branch, (branch) => branch.users, { nullable: true, eager: true })
+  @JoinColumn({ name: 'branch_id' })
+  branch: Branch | null;
 
   @Index()
   @Column({ type: 'enum', enum: ['active', 'disabled', 'deleted'], default: 'active' })

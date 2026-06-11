@@ -16,6 +16,13 @@ export interface Department {
   default_apps?: { id: string; slug: string; name: string }[];
 }
 
+export interface Branch {
+  id: string;
+  slug: string;
+  name: string;
+  default_apps?: { id: string; slug: string; name: string }[];
+}
+
 export interface BulkRow {
   _id: string;
   name: string;
@@ -24,6 +31,7 @@ export interface BulkRow {
   password: string;
   user_type: 'employee' | 'client';
   department_id: string;
+  branch_id: string;
   is_team_lead: boolean;
   apps: Record<string, AppCellState>; // keyed by app slug
 }
@@ -65,31 +73,44 @@ export function validateRow(row: BulkRow, allRows: BulkRow[]): Record<string, st
   if (row.company_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.company_email.trim())) {
     errors.company_email = 'Invalid email';
   }
-  if (row.user_type !== 'client' && !row.department_id) {
-    errors.department_id = 'Department required';
+  if (row.user_type !== 'client') {
+    if (!row.department_id) errors.department_id = 'Department required';
+    if (!row.branch_id) errors.branch_id = 'Branch required';
   }
   return errors;
 }
 
 export function buildDefaultApps(
   departmentId: string,
+  branchId: string,
   departments: Department[],
+  branches: Branch[],
 ): Record<string, AppCellState> {
-  if (!departments) return {};
-  const dept = departments.find((d) => d.id === departmentId);
-  if (!dept) return {};
   const result: Record<string, AppCellState> = {};
-  for (const app of dept.default_apps ?? []) {
-    result[app.slug] = 'access';
+  if (departments) {
+    const dept = departments.find((d) => d.id === departmentId);
+    if (dept) {
+      for (const app of dept.default_apps ?? []) {
+        result[app.slug] = 'access';
+      }
+    }
+  }
+  if (branches) {
+    const branch = branches.find((b) => b.id === branchId);
+    if (branch) {
+      for (const app of branch.default_apps ?? []) {
+        result[app.slug] = 'access';
+      }
+    }
   }
   return result;
 }
 
 export function downloadTemplate() {
   const csv = [
-    'name,email,company_email,password,user_type,department_name,is_team_lead',
-    'John Doe,john.doe@example.com,internal.john@company.com,SecurePass123,employee,Technology,no',
-    'Jane Smith,jane.smith@example.com,,SecurePass123,employee,Accounts,no',
+    'name,email,company_email,password,user_type,department_name,branch_name,is_team_lead',
+    'John Doe,john.doe@example.com,internal.john@company.com,SecurePass123,employee,Technology,HO (Chembur),no',
+    'Jane Smith,jane.smith@example.com,,SecurePass123,employee,Accounts,HO (Chembur),no',
   ].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -105,6 +126,7 @@ export function downloadTemplate() {
 export async function parseFile(
   file: File,
   departments: Department[],
+  branches: Branch[],
 ): Promise<BulkRow[]> {
   const data = await file.arrayBuffer();
   const workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
@@ -141,7 +163,20 @@ export async function parseFile(
         (deptRaw.length >= 2 && deptRaw.includes(d.name.toLowerCase())),
     );
     const department_id = dept?.id ?? '';
-    const apps = buildDefaultApps(department_id, departments);
+
+    const branchRaw = (row['branch_name'] || row['branch'] || '').toLowerCase().trim();
+    const branchSlug = branchRaw.replace(/\s+/g, '-');
+    const branch = branches?.find(
+      (b) =>
+        b.name.toLowerCase() === branchRaw ||
+        b.slug === branchRaw ||
+        b.slug === branchSlug ||
+        (branchRaw.length >= 2 && b.name.toLowerCase().includes(branchRaw)) ||
+        (branchRaw.length >= 2 && branchRaw.includes(b.name.toLowerCase())),
+    );
+    const branch_id = branch?.id ?? '';
+
+    const apps = buildDefaultApps(department_id, branch_id, departments, branches);
 
     const leadRaw = (row['is_team_lead'] || row['team_lead'] || row['lead'] || '').toLowerCase();
     const is_team_lead = ['yes', 'true', '1', 'y', '✓'].includes(leadRaw);
@@ -154,6 +189,7 @@ export async function parseFile(
       password: row['password'] || row['pass'] || '',
       user_type,
       department_id,
+      branch_id,
       is_team_lead,
       apps,
     };

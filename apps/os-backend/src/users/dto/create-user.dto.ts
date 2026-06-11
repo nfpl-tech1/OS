@@ -39,4 +39,8 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   is_team_lead?: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  branch_id?: string;
 }

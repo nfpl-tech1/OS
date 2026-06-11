@@ -6,6 +6,7 @@ import {
   AppCellState, 
   App, 
   Department, 
+  Branch,
   BulkRow, 
   ImportResult, 
   uid, 
@@ -46,6 +47,7 @@ interface BulkImportModalProps {
   isOpen: boolean;
   apps: App[];
   departments: Department[];
+  branches: Branch[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -69,6 +71,7 @@ const COLS = [
   { key: 'password', label: 'Password', width: 140 },
   { key: 'user_type', label: 'Type', width: 100 },
   { key: 'department', label: 'Unit', width: 140 },
+  { key: 'branch', label: 'Branch', width: 140 },
   { key: 'lead', label: 'Lead', width: 64 },
   { key: 'del', label: '', width: 40 },
 ] as const;
@@ -131,6 +134,7 @@ export default function BulkImportModal({
   isOpen,
   apps,
   departments,
+  branches,
   onClose,
   onSuccess,
 }: BulkImportModalProps) {
@@ -160,7 +164,7 @@ export default function BulkImportModal({
       setParsing(true);
       setParseError(null);
       try {
-        const parsed = await parseFile(file, departments);
+        const parsed = await parseFile(file, departments, branches);
         setRows(parsed);
         setStep('preview');
       } catch (err: unknown) {
@@ -170,7 +174,7 @@ export default function BulkImportModal({
         setParsing(false);
       }
     },
-    [departments],
+    [departments, branches],
   );
 
   const handleDrop = useCallback(
@@ -189,11 +193,10 @@ export default function BulkImportModal({
       prev.map((r) => {
         if (r._id !== id) return r;
         if (
-          'department_id' in fields &&
-          fields.department_id !== undefined &&
-          fields.department_id !== r.department_id
+          ('department_id' in fields && fields.department_id !== undefined && fields.department_id !== r.department_id) ||
+          ('branch_id' in fields && fields.branch_id !== undefined && fields.branch_id !== r.branch_id)
         ) {
-          const newDefaults = buildDefaultApps(fields.department_id, departments);
+          const newDefaults = buildDefaultApps(fields.department_id ?? r.department_id, fields.branch_id ?? r.branch_id, departments, branches);
           const merged: Record<string, AppCellState> = { ...r.apps };
           for (const [slug, state] of Object.entries(newDefaults)) {
             if ((merged[slug] ?? 'none') === 'none') {
@@ -222,7 +225,7 @@ export default function BulkImportModal({
   const addRow = () => {
     setRows((prev) => [
       ...prev,
-      { _id: uid(), name: '', email: '', company_email: '', password: '', user_type: 'employee', department_id: '', is_team_lead: false, apps: {} },
+      { _id: uid(), name: '', email: '', company_email: '', password: '', user_type: 'employee', department_id: '', branch_id: '', is_team_lead: false, apps: {} },
     ]);
   };
 
@@ -248,6 +251,7 @@ export default function BulkImportModal({
           password: r.password,
           user_type: r.user_type,
           ...(r.department_id ? { department_id: r.department_id } : {}),
+          ...(r.branch_id ? { branch_id: r.branch_id } : {}),
           is_team_lead: r.is_team_lead,
           app_slugs,
           admin_app_slugs,
@@ -349,7 +353,7 @@ export default function BulkImportModal({
                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 leading-none">Payload requirements</p>
                   <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                    Required: name, email, password, user_type. Department is required for internal users and is matched by name or slug.
+                    Required: name, email, password, user_type. Department and Branch are required for internal users.
                   </p>
                 </div>
               </div>
@@ -474,6 +478,24 @@ export default function BulkImportModal({
                                 <SelectContent>
                                   {departments.map(d => (
                                     <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="p-1 px-2">
+                              <Select 
+                                value={row.branch_id} 
+                                onValueChange={(val) => updateRow(row._id, { branch_id: val })}
+                              >
+                                <SelectTrigger className={cn(
+                                  "h-10 border-none bg-slate-50/50 rounded-lg text-xs font-bold uppercase tracking-wider text-primary focus:ring-0",
+                                  errs.branch_id && "text-red-500"
+                                )}>
+                                  <SelectValue placeholder="—" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {branches.map(b => (
+                                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>

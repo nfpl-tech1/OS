@@ -39,6 +39,7 @@ export default function NewUserPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [departments, setDepartments] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string; slug: string }[]>([]);
   const [apps, setApps] = useState<AppOption[]>([]);
   const [appSelections, setAppSelections] = useState<AppSelections>({});
   const [form, setForm] = useState({
@@ -48,6 +49,7 @@ export default function NewUserPage() {
     password: '',
     user_type: 'employee' as 'employee' | 'client',
     department_id: '',
+    branch_id: '',
     org_id: '',
     is_team_lead: false,
   });
@@ -57,6 +59,7 @@ export default function NewUserPage() {
 
   useEffect(() => {
     api.get('/users/departments').then((r) => setDepartments(r.data));
+    api.get('/users/branches').then((r) => setBranches(r.data));
     getApplications().then(setApps);
   }, []);
 
@@ -126,6 +129,11 @@ export default function NewUserPage() {
         setLoading(false);
         return;
       }
+      if (form.user_type !== 'client' && !form.branch_id) {
+        setError('Please assign a branch for internal users.');
+        setLoading(false);
+        return;
+      }
 
       // Validate email uniqueness
       const users = await api.get('/users').then(res => res.data);
@@ -136,10 +144,17 @@ export default function NewUserPage() {
         return;
       }
 
-      // Pre-select Default Apps for the department
-      if (form.user_type !== 'client' && form.department_id) {
-        const defaultApps = await api.get(`/users/departments/${form.department_id}/default-apps`).then(res => res.data);
-        const defaultSlugs = new Set<string>(defaultApps.map((a: { slug: string }) => a.slug));
+      // Pre-select Default Apps for the department and branch
+      if (form.user_type !== 'client') {
+        const defaultSlugs = new Set<string>();
+        if (form.department_id) {
+          const deptApps = await api.get(`/users/departments/${form.department_id}/default-apps`).then(res => res.data);
+          deptApps.forEach((a: { slug: string }) => defaultSlugs.add(a.slug));
+        }
+        if (form.branch_id) {
+          const branchApps = await api.get(`/users/branches/${form.branch_id}/default-apps`).then(res => res.data);
+          branchApps.forEach((a: { slug: string }) => defaultSlugs.add(a.slug));
+        }
         
         setAppSelections(prev => {
           const next = { ...prev };
@@ -170,6 +185,10 @@ export default function NewUserPage() {
       setError('Please assign a department for internal users.');
       return;
     }
+    if (form.user_type !== 'client' && !form.branch_id) {
+      setError('Please assign a branch for internal users.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -177,6 +196,7 @@ export default function NewUserPage() {
         ...form,
         company_email: form.company_email.trim() || undefined,
         department_id: form.department_id || undefined,
+        branch_id: form.branch_id || undefined,
         org_id: form.org_id || undefined,
       });
       for (const [slug, selection] of Object.entries(appSelections)) {
@@ -348,13 +368,28 @@ export default function NewUserPage() {
                             <SelectTrigger className="h-12 w-full max-w-md rounded-xl border-slate-200 focus:ring-primary/5 focus:border-primary font-bold text-slate-900 text-sm">
                               <SelectValue placeholder="Select Unit..." />
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl">
+                            <SelectContent className="rounded-xl bg-white">
                               {departments.map((d) => (
                                 <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                           <p className="text-[10px] text-slate-400 font-medium ml-1">Department assignment is required for internal users.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold text-slate-600 ml-1">Assigned Branch</Label>
+                          <Select value={form.branch_id} onValueChange={(val) => set('branch_id', val)}>
+                            <SelectTrigger className="h-12 w-full max-w-md rounded-xl border-slate-200 focus:ring-primary/5 focus:border-primary font-bold text-slate-900 text-sm">
+                              <SelectValue placeholder="Select Branch..." />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl bg-white">
+                              {branches.map((b) => (
+                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-[10px] text-slate-400 font-medium ml-1">Branch assignment is required for internal users.</p>
                         </div>
 
                         <div className={cn(
@@ -435,6 +470,11 @@ export default function NewUserPage() {
                             ? 'Client Organization' 
                             : (departments.find(d => d.id === form.department_id)?.name || 'Department required')}
                         </p>
+                        {form.user_type !== 'client' && (
+                          <p className="text-xs font-medium text-slate-600 truncate mt-1">
+                            {branches.find(b => b.id === form.branch_id)?.name || 'Branch required'}
+                          </p>
+                        )}
                       </div>
                     </div>
 

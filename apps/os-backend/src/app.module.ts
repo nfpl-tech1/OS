@@ -14,6 +14,8 @@ import { ClientOrganization } from './database/entities/client-organization.enti
 import { SsoToken } from './database/entities/sso-token.entity';
 import { DepartmentDefaultApp } from './database/entities/department-default-app.entity';
 import { AuditLog } from './database/entities/audit-log.entity';
+import { Branch } from './database/entities/branch.entity';
+import { BranchDefaultApp } from './database/entities/branch-default-app.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AppsModule } from './apps/apps.module';
@@ -46,6 +48,8 @@ import { OrganizationsModule } from './organizations/organizations.module';
           SsoToken,
           DepartmentDefaultApp,
           AuditLog,
+          Branch,
+          BranchDefaultApp,
         ],
         synchronize: false,
         logging: true,

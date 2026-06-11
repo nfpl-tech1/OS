@@ -15,6 +15,8 @@ import { UserAppAccess } from '../database/entities/user-app-access.entity';
 import { ClientOrganization } from '../database/entities/client-organization.entity';
 import { Department } from '../database/entities/department.entity';
 import { DepartmentDefaultApp } from '../database/entities/department-default-app.entity';
+import { Branch } from '../database/entities/branch.entity';
+import { BranchDefaultApp } from '../database/entities/branch-default-app.entity';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { BulkCreateUserDto } from './dto/bulk-create-user.dto';
@@ -42,6 +44,10 @@ export class UsersService {
     private deptRepo: Repository<Department>,
     @InjectRepository(DepartmentDefaultApp)
     private deptDefaultAppRepo: Repository<DepartmentDefaultApp>,
+    @InjectRepository(Branch)
+    private branchRepo: Repository<Branch>,
+    @InjectRepository(BranchDefaultApp)
+    private branchDefaultAppRepo: Repository<BranchDefaultApp>,
     private webhookService: WebhookService,
     private auditLog: AuditLogService,
   ) {}
@@ -50,7 +56,7 @@ export class UsersService {
   async getMe(userId: string) {
     const user = await this.usersRepo.findOne({
       where: { id: userId, status: 'active' },
-      relations: ['userType', 'department', 'organization'],
+      relations: ['userType', 'department', 'organization', 'branch'],
     });
     if (!user) throw new NotFoundException('User not found');
 
@@ -67,6 +73,9 @@ export class UsersService {
           department_id: user.department?.id ?? null,
           department_slug: user.department?.slug ?? null,
           department_name: user.department?.name ?? null,
+          branch_id: user.branch?.id ?? null,
+          branch_slug: user.branch?.slug ?? null,
+          branch_name: user.branch?.name ?? null,
         },
         allowed_apps: allApps.map((a) => ({
           slug: a.slug,
@@ -103,6 +112,9 @@ export class UsersService {
         department_id: user.department?.id ?? null,
         department_slug: user.department?.slug ?? null,
         department_name: user.department?.name ?? null,
+        branch_id: user.branch?.id ?? null,
+        branch_slug: user.branch?.slug ?? null,
+        branch_name: user.branch?.name ?? null,
       },
       allowed_apps,
     };
@@ -111,7 +123,7 @@ export class UsersService {
   // ─── List all users ───────────────────────────────────────────────
   async findAll() {
     const users = await this.usersRepo.find({
-      relations: ['userType', 'organization', 'department'],
+      relations: ['userType', 'organization', 'department', 'branch'],
       order: { created_at: 'DESC' },
     });
 
@@ -122,7 +134,7 @@ export class UsersService {
   async findOne(id: string) {
     const user = await this.usersRepo.findOne({
       where: { id },
-      relations: ['userType', 'appAccess', 'appAccess.application', 'organization', 'department'],
+      relations: ['userType', 'appAccess', 'appAccess.application', 'organization', 'department', 'branch'],
     });
     if (!user) throw new NotFoundException('User not found');
     return this.sanitize(user);
@@ -167,6 +179,9 @@ export class UsersService {
     if (dto.department_id) {
       user.department = await this.findDepartmentOrThrow(dto.department_id);
     }
+    if (dto.branch_id) {
+      user.branch = await this.findBranchOrThrow(dto.branch_id);
+    }
 
     // Link client user to organization via direct FK
     if (dto.user_type === 'client' && dto.org_id) {
@@ -209,11 +224,34 @@ export class UsersService {
       }
     }
 
+    // Auto-assign branch default apps
+    if (user.branch) {
+      const branchDefaultApps = await this.branchDefaultAppRepo.find({
+        where: { branch: { id: user.branch.id } },
+        relations: ['application'],
+      });
+      for (const defaultApp of branchDefaultApps) {
+        const already = await this.accessRepo.findOne({
+          where: { user: { id: saved.id }, application: { id: defaultApp.application.id } },
+        });
+        if (!already) {
+          await this.accessRepo.save({
+            user: saved,
+            application: defaultApp.application,
+            is_enabled: true,
+            is_app_admin: false,
+            granted_by: createdById,
+          });
+        }
+      }
+    }
+
     this.webhookService.notifyApps(saved.id, saved.email, 'user.created', {
       name: saved.name,
       company_email: saved.company_email,
       user_type: userType.slug,
       department_slug: saved.department?.slug ?? null,
+      branch_slug: saved.branch?.slug ?? null,
       org_id: saved.organization?.id ?? null,
     }).catch(() => {});
 
@@ -261,6 +299,14 @@ export class UsersService {
       }
     }
 
+    if (dto.branch_id !== undefined) {
+      if (dto.branch_id === null) {
+        user.branch = null;
+      } else {
+        user.branch = await this.findBranchOrThrow(dto.branch_id);
+      }
+    }
+
     const saved = await this.usersRepo.save(user);
 
     const after = { name: saved.name, email: saved.email, status: saved.status, is_team_lead: saved.is_team_lead };
@@ -286,7 +332,7 @@ export class UsersService {
     // Re-fetch with full relations for webhook payload and return value
     const full = (await this.usersRepo.findOne({
       where: { id: saved.id },
-      relations: ['userType', 'department', 'organization'],
+      relations: ['userType', 'department', 'organization', 'branch'],
     }))!;
 
     // Fire webhook if status changed (lifecycle events)
@@ -301,6 +347,7 @@ export class UsersService {
       company_email: full.company_email,
       user_type: full.userType?.slug ?? '',
       department_slug: full.department?.slug ?? null,
+      branch_slug: full.branch?.slug ?? null,
       org_id: full.organization?.id ?? null,
       status: full.status,
     }).catch(() => {});
@@ -447,7 +494,7 @@ export class UsersService {
   async getProfile(id: string) {
     const user = await this.usersRepo.findOne({
       where: { id },
-      relations: ['userType', 'department', 'organization'],
+      relations: ['userType', 'department', 'organization', 'branch'],
     });
     if (!user) throw new NotFoundException('User not found');
     return {
@@ -460,6 +507,9 @@ export class UsersService {
       department_id: user.department?.id ?? null,
       department_slug: user.department?.slug ?? null,
       department_name: user.department?.name ?? null,
+      branch_id: user.branch?.id ?? null,
+      branch_slug: user.branch?.slug ?? null,
+      branch_name: user.branch?.name ?? null,
       org_id: user.organization?.id ?? null,
       org_name: user.organization?.name ?? null,
     };
@@ -730,6 +780,9 @@ export class UsersService {
         if (entry.department_id) {
           user.department = await this.findDepartmentOrThrow(entry.department_id);
         }
+        if (entry.branch_id) {
+          user.branch = await this.findBranchOrThrow(entry.branch_id);
+        }
 
         if (entry.user_type === 'client' && entry.org_id) {
           user.organization = await this.clientOrgRepo.findOne({
@@ -743,6 +796,19 @@ export class UsersService {
         const appSlugs = new Set(entry.app_slugs ?? []);
         const adminAppSlugs = new Set(entry.admin_app_slugs ?? []);
         const allAppSlugs = new Set([...appSlugs, ...adminAppSlugs]);
+
+        // Assign branch default apps
+        if (user.branch) {
+          const branchDefaultApps = await this.branchDefaultAppRepo.find({
+            where: { branch: { id: user.branch.id } },
+            relations: ['application'],
+          });
+          for (const defaultApp of branchDefaultApps) {
+            if (!allAppSlugs.has(defaultApp.application.slug)) {
+              allAppSlugs.add(defaultApp.application.slug);
+            }
+          }
+        }
 
         for (const slug of allAppSlugs) {
           const app = await this.appRepo.findOne({
@@ -780,6 +846,7 @@ export class UsersService {
             name: saved.name,
             user_type: userType.slug,
             department_slug: saved.department?.slug ?? null,
+            branch_slug: saved.branch?.slug ?? null,
             org_id: saved.organization?.id ?? null,
           })
           .catch(() => {});
@@ -824,5 +891,15 @@ export class UsersService {
       throw new NotFoundException('Department not found');
     }
     return department;
+  }
+
+  private async findBranchOrThrow(branchId: string) {
+    const branch = await this.branchRepo.findOne({
+      where: { id: branchId },
+    });
+    if (!branch) {
+      throw new NotFoundException('Branch not found');
+    }
+    return branch;
   }
 }

@@ -249,6 +249,47 @@ export async function removeDepartmentDefaultApp(deptId: string, appId: string) 
   return res.data;
 }
 
+// ─── Branches (Admin) ──────────────────────────────────────────
+export async function getBranches() {
+  const res = await api.get('/users/branches');
+  return res.data as Array<{
+    id: string;
+    slug: string;
+    name: string;
+    default_apps: { id: string; slug: string; name: string }[];
+  }>;
+}
+
+export async function createBranch(name: string) {
+  const res = await api.post('/users/branches', { name });
+  return res.data;
+}
+
+export async function updateBranch(id: string, name: string) {
+  const res = await api.put(`/users/branches/${id}`, { name });
+  return res.data;
+}
+
+export async function deleteBranch(id: string) {
+  const res = await api.delete(`/users/branches/${id}`);
+  return res.data;
+}
+
+export async function getBranchDefaultApps(branchId: string) {
+  const res = await api.get(`/users/branches/${branchId}/default-apps`);
+  return res.data as Array<{ id: string; slug: string; name: string }>;
+}
+
+export async function addBranchDefaultApp(branchId: string, appId: string) {
+  const res = await api.post(`/users/branches/${branchId}/default-apps`, { app_id: appId });
+  return res.data;
+}
+
+export async function removeBranchDefaultApp(branchId: string, appId: string) {
+  const res = await api.delete(`/users/branches/${branchId}/default-apps/${appId}`);
+  return res.data;
+}
+
 // ─── Audit Logs (Admin) ──────────────────────────────────────────
 export interface AuditLogEntry {
   id: string;
