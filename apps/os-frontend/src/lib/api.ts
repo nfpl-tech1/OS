@@ -85,6 +85,7 @@ export async function createUser(data: {
   user_type: 'employee' | 'client';
   company_email?: string;
   department_id?: string;
+  branch_id?: string;
   org_id?: string;
   is_team_lead?: boolean;
 }) {
@@ -102,6 +103,7 @@ export async function updateUser(
     status?: 'active' | 'disabled' | 'deleted';
     is_team_lead?: boolean;
     department_id?: string | null;
+    branch_id?: string | null;
   },
 ) {
   const res = await api.patch(`/users/${id}`, data);
