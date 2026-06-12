@@ -10,6 +10,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { BranchesService } from './branches.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -24,7 +25,10 @@ import { Public } from '../common/decorators/public.decorator';
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private branchesService: BranchesService,
+  ) {}
 
   // GET /users/me — any authenticated user
   @Get('me')
@@ -100,6 +104,76 @@ export class UsersController {
     @Request() req,
   ) {
     return this.usersService.removeDepartmentDefaultApp(departmentId, appId, req.user.id);
+  }
+
+  // ─── BRANCHES ────────────────────────────────────────────────────────
+  
+  // GET /users/branches — any authenticated user
+  @Get('branches')
+  getBranches() {
+    return this.branchesService.getBranches();
+  }
+
+  // GET /users/internal/branches — internal API only
+  @Get('internal/branches')
+  @Public()
+  @UseGuards(InternalApiGuard)
+  getInternalBranches() {
+    return this.branchesService.getBranches();
+  }
+
+  // POST /users/branches — admin only
+  @Post('branches')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  createBranch(@Body() body: { name: string }) {
+    return this.branchesService.createBranch(body.name);
+  }
+
+  // PATCH /users/branches/:id — admin only
+  @Patch('branches/:id')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  updateBranch(@Param('id') id: string, @Body() body: { name: string }) {
+    return this.branchesService.updateBranch(id, body.name);
+  }
+
+  // DELETE /users/branches/:id — admin only
+  @Delete('branches/:id')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  deleteBranch(@Param('id') id: string) {
+    return this.branchesService.deleteBranch(id);
+  }
+
+  // GET /users/branches/:id/default-apps — admin only
+  @Get('branches/:id/default-apps')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  getBranchDefaultApps(@Param('id') id: string) {
+    return this.branchesService.getBranchDefaultApps(id);
+  }
+
+  // POST /users/branches/:id/default-apps — admin only
+  @Post('branches/:id/default-apps')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  addBranchDefaultApp(
+    @Param('id') branchId: string,
+    @Body() body: { app_id: string },
+  ) {
+    return this.branchesService.addDefaultApp(branchId, body.app_id);
+  }
+
+  // DELETE /users/branches/:id/default-apps/:appId — admin only
+  @Delete('branches/:id/default-apps/:appId')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  removeBranchDefaultApp(
+    @Param('id') branchId: string,
+    @Param('appId') appId: string,
+  ) {
+    return this.branchesService.removeDefaultApp(branchId, appId);
   }
 
   // GET /users/applications — any authenticated user
