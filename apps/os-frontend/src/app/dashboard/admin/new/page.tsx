@@ -237,13 +237,13 @@ export default function NewUserPage() {
                 "text-[10px] uppercase font-extrabold tracking-widest",
                 step >= s ? "text-primary" : "text-slate-300"
               )}>
-                Step 0{s}
+                Step {s}
               </span>
               <span className={cn(
                 "text-xs font-bold",
                 step >= s ? "text-slate-900" : "text-slate-400"
               )}>
-                {s === 1 ? 'Core Identity' : 'Access Provisioning'}
+                {s === 1 ? 'Basic Details' : 'Access Provisioning'}
               </span>
             </div>
             {step === s && <div className="absolute -bottom-[1px] left-0 right-0 h-[2px] bg-brand-navy animate-in slide-in-from-left duration-500" />}
@@ -259,7 +259,7 @@ export default function NewUserPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Add New User</h1>
-            <p className="text-slate-500 mt-1 text-sm font-medium">Create a high-level security profile and assign modular access.</p>
+            <p className="text-slate-500 mt-1 text-sm font-medium">Add an employee and assign their department and access level.</p>
           </div>
           <Button variant="outline" onClick={() => router.back()} className="h-9 px-4 border-slate-200 text-slate-600 font-bold rounded-xl shadow-sm hover:bg-slate-50">
             <Icons.Back size={14} className="mr-2" />
@@ -278,7 +278,7 @@ export default function NewUserPage() {
                   <div className="space-y-6">
                     <div className="flex items-center gap-2">
                        <div className="w-8 h-1 bg-brand-navy rounded-full" />
-                       <h3 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">Personnel Data</h3>
+                       <h3 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">Employee Details</h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -307,7 +307,7 @@ export default function NewUserPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-600 ml-1">Company Email <span className="text-slate-400 font-normal">(Optional)</span></Label>
+                        <Label className="text-xs font-bold text-slate-600 ml-1">Notification Email <span className="text-slate-400 font-normal">(Optional)</span></Label>
                         <div className="relative group">
                           <Icons.Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" />
                           <Input type="email" value={form.company_email} onChange={(e) => set('company_email', e.target.value)}
@@ -321,7 +321,7 @@ export default function NewUserPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-600 ml-1">Designation Type</Label>
+                        <Label className="text-xs font-bold text-slate-600 ml-1">User Type</Label>
                         <Select value={form.user_type} onValueChange={(val) => set('user_type', val as UserTypeValue)}>
                           <SelectTrigger className="h-12 w-full rounded-xl border-slate-200 focus:ring-primary/5 focus:border-primary font-bold text-slate-900 text-sm">
                             <SelectValue />
@@ -334,7 +334,7 @@ export default function NewUserPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-600 ml-1">Security Credentials</Label>
+                        <Label className="text-xs font-bold text-slate-600 ml-1">Password</Label>
                         <div className="relative group">
                           <Icons.Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" />
                           <Input type={showPassword ? 'text' : 'password'} required minLength={8}
@@ -357,13 +357,13 @@ export default function NewUserPage() {
                   <div className="space-y-6">
                     <div className="flex items-center gap-2">
                        <div className="w-8 h-1 bg-primary rounded-full" />
-                       <h3 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">Structural Mapping</h3>
+                       <h3 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">Department & Access</h3>
                     </div>
 
                     {form.user_type !== 'client' ? (
                       <div className="space-y-6">
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold text-slate-600 ml-1">Assigned Organizational Unit</Label>
+                          <Label className="text-xs font-bold text-slate-600 ml-1">Department</Label>
                           <Select value={form.department_id} onValueChange={(val) => set('department_id', val)}>
                             <SelectTrigger className="h-12 w-full max-w-md rounded-xl border-slate-200 focus:ring-primary/5 focus:border-primary font-bold text-slate-900 text-sm">
                               <SelectValue placeholder="Select Unit..." />
@@ -378,7 +378,7 @@ export default function NewUserPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold text-slate-600 ml-1">Assigned Branch</Label>
+                          <Label className="text-xs font-bold text-slate-600 ml-1">Branch</Label>
                           <Select value={form.branch_id} onValueChange={(val) => set('branch_id', val)}>
                             <SelectTrigger className="h-12 w-full max-w-md rounded-xl border-slate-200 focus:ring-primary/5 focus:border-primary font-bold text-slate-900 text-sm">
                               <SelectValue placeholder="Select Branch..." />
@@ -407,7 +407,7 @@ export default function NewUserPage() {
                             </div>
                             <div>
                               <p className="text-sm font-bold text-slate-900">Assign as Team Lead</p>
-                              <p className="text-[10px] text-slate-500 font-medium leading-tight">Grant managerial authority over the assigned organizational unit.</p>
+                              <p className="text-[10px] text-slate-500 font-medium leading-tight">This user can view progress reports for their department.</p>
                             </div>
                           </div>
                           <Switch 
@@ -438,7 +438,7 @@ export default function NewUserPage() {
                   <div className="bg-slate-50/50 rounded-3xl border border-slate-100 p-6 lg:p-8 space-y-6 sticky top-24">
                     <div className="flex items-center gap-2 mb-2 text-primary">
                        <Icons.File size={14} />
-                       <h3 className="text-[10px] font-extrabold uppercase tracking-widest">Identity Preview</h3>
+                       <h3 className="text-[10px] font-extrabold uppercase tracking-widest">Preview</h3>
                     </div>
 
                     <div className="flex flex-col items-center text-center space-y-4">
@@ -459,12 +459,12 @@ export default function NewUserPage() {
 
                     <div className="space-y-4 pt-4">
                       <div className="space-y-1">
-                        <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">Communication Bridge</p>
+                        <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">Email</p>
                         <p className="text-xs font-medium text-slate-600 break-all">{form.email || 'pending assignment...'}</p>
                       </div>
                       
                       <div className="space-y-1">
-                        <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">Organizational Node</p>
+                        <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">Assignment</p>
                         <p className="text-xs font-medium text-slate-600 truncate">
                           {form.user_type === 'client' 
                             ? 'Client Organization' 
@@ -478,13 +478,6 @@ export default function NewUserPage() {
                       </div>
                     </div>
 
-                    <div className="pt-6">
-                      <div className="p-4 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/40 shadow-sm">
-                        <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic">
-                          &quot;Personnel will receive a system invitation via email once the provisioning process is complete.&quot;
-                        </p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>

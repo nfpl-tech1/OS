@@ -17,7 +17,10 @@ export type OsWebhookEvent =
   | 'user.app_access_revoked'
   | 'department.created'
   | 'department.updated'
-  | 'department.deleted';
+  | 'department.deleted'
+  | 'branch.created'
+  | 'branch.updated'
+  | 'branch.deleted';
 
 // ─── Per-event payload interfaces ───────────────────────────────────────────
 
@@ -84,6 +87,31 @@ export interface DepartmentDeletedPayload {
   timestamp: string;
 }
 
+export interface BranchCreatedPayload {
+  event: 'branch.created';
+  branch_id: string;
+  branch_slug: string;
+  branch_name: string;
+  timestamp: string;
+}
+
+export interface BranchUpdatedPayload {
+  event: 'branch.updated';
+  branch_id: string;
+  branch_slug: string;
+  branch_name: string;
+  new_slug: string;
+  new_name: string;
+  timestamp: string;
+}
+
+export interface BranchDeletedPayload {
+  event: 'branch.deleted';
+  branch_id: string;
+  branch_slug: string;
+  timestamp: string;
+}
+
 export type OsWebhookPayload =
   | UserCreatedPayload
   | UserUpdatedPayload
@@ -91,7 +119,10 @@ export type OsWebhookPayload =
   | UserAppAccessRevokedPayload
   | DepartmentCreatedPayload
   | DepartmentUpdatedPayload
-  | DepartmentDeletedPayload;
+  | DepartmentDeletedPayload
+  | BranchCreatedPayload
+  | BranchUpdatedPayload
+  | BranchDeletedPayload;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -195,6 +226,24 @@ export class WebhookService {
    */
   async broadcastDepartment(
     event: 'department.created' | 'department.updated' | 'department.deleted',
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const apps = await this.appRepo.find({
+      where: { is_active: true, webhook_url: Not(IsNull()) },
+    });
+
+    const payload = { event, ...data, timestamp: new Date().toISOString() } as OsWebhookPayload;
+
+    for (const app of apps) {
+      this.dispatch(app.webhook_url!, payload, app.slug);
+    }
+  }
+
+  /**
+   * Broadcast a branch event to ALL active apps that have a webhook_url.
+   */
+  async broadcastBranch(
+    event: 'branch.created' | 'branch.updated' | 'branch.deleted',
     data: Record<string, unknown>,
   ): Promise<void> {
     const apps = await this.appRepo.find({

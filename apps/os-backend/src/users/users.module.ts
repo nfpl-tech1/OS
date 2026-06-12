@@ -16,7 +16,6 @@ import { Department } from '../database/entities/department.entity';
 import { DepartmentDefaultApp } from '../database/entities/department-default-app.entity';
 import { Branch } from '../database/entities/branch.entity';
 import { BranchDefaultApp } from '../database/entities/branch-default-app.entity';
-import { BranchesController } from './branches.controller';
 import { BranchesService } from './branches.service';
 
 @Module({
@@ -34,7 +33,7 @@ import { BranchesService } from './branches.service';
     ]),
     AuditLogModule,
   ],
-  controllers: [BranchesController, UsersController],
+  controllers: [UsersController],
   providers: [UsersService, InternalApiGuard, WebhookService, BranchesService],
   exports: [UsersService, BranchesService],
 })

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Branch } from '../database/entities/branch.entity';
 import { BranchDefaultApp } from '../database/entities/branch-default-app.entity';
 import { Application } from '../database/entities/application.entity';
+import { WebhookService } from '../common/services/webhook.service';
 
 @Injectable()
 export class BranchesService {
@@ -14,6 +15,7 @@ export class BranchesService {
     private branchDefaultAppRepo: Repository<BranchDefaultApp>,
     @InjectRepository(Application)
     private appRepo: Repository<Application>,
+    private webhookService: WebhookService,
   ) {}
 
   async getBranches() {
@@ -36,12 +38,23 @@ export class BranchesService {
     }
 
     const branch = this.branchRepo.create({ name, slug, is_active: true, status: 'active' });
-    return this.branchRepo.save(branch);
+    const saved = await this.branchRepo.save(branch);
+
+    this.webhookService.broadcastBranch('branch.created', {
+      branch_id: saved.id,
+      branch_slug: saved.slug,
+      branch_name: saved.name,
+    }).catch(() => {});
+
+    return saved;
   }
 
   async updateBranch(id: string, name: string) {
     const branch = await this.branchRepo.findOne({ where: { id, status: 'active' } });
     if (!branch) throw new NotFoundException('Branch not found');
+
+    const oldSlug = branch.slug;
+    const oldName = branch.name;
 
     const newSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     if (newSlug !== branch.slug) {
@@ -52,7 +65,17 @@ export class BranchesService {
       branch.slug = newSlug;
     }
     branch.name = name;
-    return this.branchRepo.save(branch);
+    const saved = await this.branchRepo.save(branch);
+
+    this.webhookService.broadcastBranch('branch.updated', {
+      branch_id: saved.id,
+      branch_slug: oldSlug, // Pass old slug for matching
+      branch_name: oldName,
+      new_slug: saved.slug,
+      new_name: saved.name,
+    }).catch(() => {});
+
+    return saved;
   }
 
   async deleteBranch(id: string) {
@@ -61,6 +84,12 @@ export class BranchesService {
     branch.status = 'deleted';
     branch.is_active = false;
     await this.branchRepo.save(branch);
+
+    this.webhookService.broadcastBranch('branch.deleted', {
+      branch_id: branch.id,
+      branch_slug: branch.slug,
+    }).catch(() => {});
+
     return { success: true };
   }
 
