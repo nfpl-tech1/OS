@@ -46,6 +46,8 @@ export class SsoTokenService {
       user_type: (user.userType.slug === 'admin' ? 'employee' : user.userType.slug) as 'employee' | 'client',
       department_slug: user.department?.slug ?? null,
       department_name: user.department?.name ?? null,
+      branch_slug: user.branch?.slug ?? null,
+      branch_name: user.branch?.name ?? null,
       is_app_admin: appAccess.is_app_admin,
       is_team_lead: user.is_team_lead ?? false,
       org_id,

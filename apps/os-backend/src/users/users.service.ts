@@ -872,15 +872,41 @@ export class UsersService {
       });
     }
 
+    const branches = await this.branchRepo.find({ where: { status: 'active' } });
+    
+    for (const b of branches) {
+      await this.webhookService.broadcastBranch('branch.created', {
+        branch_id: b.id,
+        branch_slug: b.slug,
+        branch_name: b.name,
+      });
+    }
+
+    const users = await this.usersRepo.find({
+      relations: ['userType', 'department', 'organization', 'branch'],
+    });
+
+    for (const u of users) {
+      this.webhookService.notifyApps(u.id, u.email, 'user.updated', {
+        name: u.name,
+        company_email: u.company_email,
+        user_type: u.userType?.slug ?? '',
+        department_slug: u.department?.slug ?? null,
+        branch_slug: u.branch?.slug ?? null,
+        org_id: u.organization?.id ?? null,
+        status: u.status,
+      }).catch(() => {});
+    }
+
     this.auditLog.log({
       actor_id: actorId,
       action: 'system.sync_all',
       entity_type: 'system',
       entity_id: 'global',
-      after: { department_count: departments.length },
+      after: { department_count: departments.length, branch_count: branches.length, user_count: users.length },
     }).catch(() => {});
 
-    return { message: 'Sync broadcast initiated', departments: departments.length };
+    return { message: 'Sync broadcast initiated', departments: departments.length, branches: branches.length, users: users.length };
   }
 
   private async findDepartmentOrThrow(departmentId: string) {
