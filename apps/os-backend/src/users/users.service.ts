@@ -347,7 +347,9 @@ export class UsersService {
       company_email: full.company_email,
       user_type: full.userType?.slug ?? '',
       department_slug: full.department?.slug ?? null,
+      department_name: full.department?.name ?? null,
       branch_slug: full.branch?.slug ?? null,
+      branch_name: full.branch?.name ?? null,
       org_id: full.organization?.id ?? null,
       status: full.status,
     }).catch(() => {});
@@ -886,16 +888,24 @@ export class UsersService {
       relations: ['userType', 'department', 'organization', 'branch'],
     });
 
-    for (const u of users) {
-      this.webhookService.notifyApps(u.id, u.email, 'user.updated', {
-        name: u.name,
-        company_email: u.company_email,
-        user_type: u.userType?.slug ?? '',
-        department_slug: u.department?.slug ?? null,
-        branch_slug: u.branch?.slug ?? null,
-        org_id: u.organization?.id ?? null,
-        status: u.status,
-      }).catch(() => {});
+    const chunkSize = 50;
+    for (let i = 0; i < users.length; i += chunkSize) {
+      const chunk = users.slice(i, i + chunkSize);
+      await Promise.all(
+        chunk.map((u) =>
+          this.webhookService.notifyApps(u.id, u.email, 'user.updated', {
+            name: u.name,
+            company_email: u.company_email,
+            user_type: u.userType?.slug ?? '',
+            department_slug: u.department?.slug ?? null,
+            department_name: u.department?.name ?? null,
+            branch_slug: u.branch?.slug ?? null,
+            branch_name: u.branch?.name ?? null,
+            org_id: u.organization?.id ?? null,
+            status: u.status,
+          }).catch(() => {})
+        )
+      );
     }
 
     this.auditLog.log({

@@ -42,6 +42,9 @@ export interface UserUpdatedPayload {
   name: string;
   user_type: string;
   department_slug: string | null;
+  department_name: string | null;
+  branch_slug: string | null;
+  branch_name: string | null;
   org_id: string | null;
   status: string;
   timestamp: string;
@@ -184,11 +187,9 @@ export class WebhookService {
     };
   }
 
-  private dispatch(url: string, payload: OsWebhookPayload, appSlug: string): void {
+  private async dispatch(url: string, payload: OsWebhookPayload, appSlug: string): Promise<void> {
     const body = JSON.stringify(payload);
-    // Fire and forget from the caller's perspective
-    fetchWithRetry(url, { method: 'POST', headers: this.headers(body), body }, `${appSlug} ${payload.event}`)
-      .catch(() => {}); // fetchWithRetry already logs; swallow to avoid unhandledRejection
+    await fetchWithRetry(url, { method: 'POST', headers: this.headers(body), body }, `${appSlug} ${payload.event}`);
   }
 
   /**
@@ -216,9 +217,9 @@ export class WebhookService {
     const timestamp = new Date().toISOString();
     const base = { event, os_user_id: osUserId, email, timestamp, ...extra };
 
-    for (const r of targets) {
-      this.dispatch(r.application.webhook_url!, base as OsWebhookPayload, r.application.slug);
-    }
+    await Promise.all(
+      targets.map(r => this.dispatch(r.application.webhook_url!, base as OsWebhookPayload, r.application.slug))
+    );
   }
 
   /**
@@ -234,9 +235,9 @@ export class WebhookService {
 
     const payload = { event, ...data, timestamp: new Date().toISOString() } as OsWebhookPayload;
 
-    for (const app of apps) {
-      this.dispatch(app.webhook_url!, payload, app.slug);
-    }
+    await Promise.all(
+      apps.map(app => this.dispatch(app.webhook_url!, payload, app.slug))
+    );
   }
 
   /**
@@ -252,8 +253,8 @@ export class WebhookService {
 
     const payload = { event, ...data, timestamp: new Date().toISOString() } as OsWebhookPayload;
 
-    for (const app of apps) {
-      this.dispatch(app.webhook_url!, payload, app.slug);
-    }
+    await Promise.all(
+      apps.map(app => this.dispatch(app.webhook_url!, payload, app.slug))
+    );
   }
 }
